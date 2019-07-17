@@ -47,7 +47,7 @@ union4byte_t BufferUnion;
 void Sender() {
   LoRa.setTxPower(20);
   temperature = 0.0;
-  for(int i = 1; i <= now_temperature_index; i++) temperature += temperature_values[i];
+  for (int i = 1; i <= now_temperature_index; i++) temperature += temperature_values[i];
   Serial.print("Sending packet: ");
   Serial.print(addr);
   Serial.print(" ");
@@ -67,7 +67,7 @@ void setup() {
 
   //Serial.println("Lora wan говно");
 
-  while(!LoRa.begin(430E6)) {
+  while (!LoRa.begin(430E6)) {
     Serial.println("Starting LoRa failed!");
     delay(100);
   }
@@ -78,23 +78,25 @@ void setup() {
 }
 
 void loop() {
+  delay(50);
+  Serial.begin(9600);
   now_step++;
-  
-  if(now_step % get_temperature_step == 0)
-  {      
+
+  if (now_step % get_temperature_step == 0)
+  {
     now_temperature_index++;
     temperature_values[now_temperature_index] = thermo.readCelsius();
     Serial.print("get to ");
-    Serial.print(now_temperature_index);  
+    Serial.print(now_temperature_index);
     Serial.print(" value ");
     Serial.println(temperature_values[now_temperature_index]);
   }
-  
-  if (now_step % send_step == 0) 
+
+  if (now_step % send_step == 0)
   {
     in_wait = 1;
     Serial.println("in send");
-    while(in_wait)
+    while (in_wait)
     {
       Sender();
       for (int i = 0; i < waiting_steps; i++)
@@ -112,28 +114,35 @@ void loop() {
             Serial.write(Buffer, BufferSize);
           }
           Serial.println();
-          BufferUnion.Bytes[0] = Buffer[4];
-          BufferUnion.Bytes[1] = Buffer[5];
-          BufferUnion.Bytes[2] = Buffer[6];
-          BufferUnion.Bytes[3] = Buffer[7];
-          if (BufferUnion.SmallInt == OK)
-          {
-            Serial.println("Sending secsess");
-            in_wait = 0;
-            now_temperature_index = 0;
-            break;
+          BufferUnion.Bytes[0] = Buffer[0];
+          BufferUnion.Bytes[1] = Buffer[1];
+          BufferUnion.Bytes[2] = Buffer[2];
+          BufferUnion.Bytes[3] = Buffer[3];
+          if (BufferUnion.Int == addr) {
+            BufferUnion.Bytes[0] = Buffer[4];
+            BufferUnion.Bytes[1] = Buffer[5];
+            BufferUnion.Bytes[2] = Buffer[6];
+            BufferUnion.Bytes[3] = Buffer[7];
+            if (BufferUnion.SmallInt == OK)
+            {
+              Serial.println("Sending secsess");
+              in_wait = 0;
+              now_temperature_index = 0;
+              break;
+            }
           }
         }
         delay(1);
       }
     }
   }
+  Serial.end();
 
   wdt_enable(WDTO_1S); //Задаем интервал сторожевого таймера (2с)
   WDTCSR |= (1 << WDIE); //Устанавливаем бит WDIE регистра WDTCSR для разрешения прерываний от сторожевого таймера
   set_sleep_mode(SLEEP_MODE_PWR_DOWN); //Устанавливаем интересующий нас режим
   sleep_mode(); // Переводим МК в спящий режим
-  
+
   /*in_wait = 1;
     Sender();
     while (in_wait) {

@@ -41,8 +41,9 @@ void Reciever() {
 
 void Send() {
   LoRa.setTxPower(20);
-  //Serial.print("Sending answer ");
+  Serial.print("Sending answer ");
   for (int i = 0; i < 10; i++) {
+    //Serial.println(" in cycle");
     BufferUnion.SmallInt = OK;
     BufferUnion.BigInt = int64_t(send_step) << 8;
     Buffer[4] = BufferUnion.Bytes[0];
@@ -54,7 +55,7 @@ void Send() {
     LoRa.endPacket();
     delay(1);
   }
-  //Serial.println(" Answer sended");
+  Serial.println(" Answer sended");
 }
 
 void setup() {
@@ -66,21 +67,26 @@ void setup() {
     Serial.println("Starting LoRa failed!");
     while (1);
   }
-  //Serial.println("LoRa кусшумук starting");
+  Serial.println("LoRa кусшумук starting");
   LoRa.enableCrc();
 }
 
 void loop() {
+  //Serial.println("in loop");
+  //Serial.println(LoRa.available());
+  
   int packetSize = LoRa.parsePacket();
-  if (packetSize == 8) {
-    //Serial.print(" recieved packet: ");
-    while (LoRa.available()) {
+  delay(1000);
+  Serial.println(packetSize);
+  if (packetSize) {
+    Serial.print(" recieved packet: ");
+    //while (LoRa.available()) {
       for (size_t i = 0; i < BufferSize; ++i) {
         Buffer[i] = LoRa.read();
       }
       Serial.write('#');
       Serial.write(Buffer, BufferSize);
-      /*BufferUnion.Bytes[0] = Buffer[0];
+      BufferUnion.Bytes[0] = Buffer[0];
       BufferUnion.Bytes[1] = Buffer[1];
       BufferUnion.Bytes[2] = Buffer[2];
       BufferUnion.Bytes[3] = Buffer[3];
@@ -93,7 +99,7 @@ void loop() {
       Serial.print(" value: ");
       Serial.print(BufferUnion.Float);
       Serial.println();      //*/
-    }
+    //}
     Send();
   }  
 }
