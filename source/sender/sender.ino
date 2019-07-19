@@ -5,11 +5,11 @@
 #include <avr/sleep.h>
 
 
-#define addr 13
+const int addr = 12;
 
-#define thermoDO 7  // Определяем константу с указанием № вывода Arduino к которому подключён вывод DO  ( SO, MISO ) модуля на чипе MAX6675
-#define thermoCS 6  // Определяем константу с указанзием № вывода Arduino к которому подключён вывод CS  ( SS )       модуля на чипе MAX6675
-#define thermoCLK 5 // Определяем константу с указанием № вывода Arduino к которому подключён вывод CLK ( SCK )      модуля на чипе MAX6675
+const int thermoDO = 7;  // Определяем константу с указанием № вывода Arduino к которому подключён вывод DO  ( SO, MISO ) модуля на чипе MAX6675
+const int thermoCS = 6;  // Определяем константу с указанзием № вывода Arduino к которому подключён вывод CS  ( SS )       модуля на чипе MAX6675
+const int thermoCLK = 5; // Определяем константу с указанием № вывода Arduino к которому подключён вывод CLK ( SCK )      модуля на чипе MAX6675
 
 MAX6675 thermo(thermoCLK, thermoCS, thermoDO); // Объявляем объект thermo для работы с функциями и методами библиотеки MAX6675, указывая выводы ( CLK , CS , DO )
 
@@ -25,7 +25,7 @@ const int send_time_interval      = 3000;
 const size_t     BufferSize       = 8;
 
 float     val                     = 0.0;
-int       send_step               = 11;
+int       send_step               = 3;
 int       now_temperature_index   = 0;
 int       get_temperature_step;
 long      last_send_time          = 0;
@@ -45,7 +45,7 @@ typedef union union4byte_t {
 union4byte_t BufferUnion;
 
 void Sender() {
-  LoRa.setTxPower(20);
+  //LoRa.setTxPower(20);
   temperature = 0.0;
   for (int i = 1; i <= now_temperature_index; i++) temperature += temperature_values[i];
   Serial.print("Sending packet: ");
@@ -99,10 +99,11 @@ void loop() {
     while (in_wait)
     {
       Sender();
+      LoRa.receive();
       for (int i = 0; i < waiting_steps; i++)
       {
         int packetSize = LoRa.parsePacket();
-        if (packetSize)
+        if (packetSize == 8)
         {
           Serial.print(" recieved packet: ");
           while (LoRa.available())
@@ -110,6 +111,7 @@ void loop() {
             for (size_t i = 0; i < BufferSize; ++i)
             {
               Buffer[i] = LoRa.read();
+              delay(5);
             }
             Serial.write(Buffer, BufferSize);
           }
