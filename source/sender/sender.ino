@@ -4,6 +4,10 @@
 #include <avr/wdt.h>
 #include <avr/sleep.h>
 
+#define DEBUG_OUTPUT;
+
+const uint8_t MagicByte = 1337 % 255;
+const size_t PacketSize = 9;
 
 const int addr = 12;
 
@@ -22,20 +26,22 @@ enum CODES
 const int waiting_steps           = 1000;
 const int temperature_indexes_num = 10;
 const int send_time_interval      = 3000;
-const size_t     BufferSize       = 8;
 
-float     val                     = 0.0;
 int       send_step               = 3;
 int       now_temperature_index   = 0;
 int       get_temperature_step;
 long      last_send_time          = 0;
 long      now_step                = 0;
-uint8_t   Buffer[BufferSize];
+
 bool      in_wait                 = 0;
 float     temperature_values[temperature_indexes_num];
 float     temperature             = 0.0;
+float     val                     = 0.0;
 
-typedef union union4byte_t {
+const size_t     BufferSize       = 8;
+uint8_t   Buffer[BufferSize];
+
+union union4byte_t {
   uint8_t Bytes[4];
   int8_t SmallInt;
   int32_t Int;
@@ -48,12 +54,17 @@ void Sender() {
   //LoRa.setTxPower(20);
   temperature = 0.0;
   for (int i = 1; i <= now_temperature_index; i++) temperature += temperature_values[i];
+
+  #ifdef DEBUG_OUTPUT
   Serial.print("Sending packet: ");
   Serial.print(addr);
   Serial.print(" ");
   Serial.println(temperature / now_temperature_index);
+  #endif
+  
   // send packet
   LoRa.beginPacket();
+  LoRa.write(MagicByte);
   BufferUnion.Int = addr;
   LoRa.write(BufferUnion.Bytes, 4);
   BufferUnion.Float = temperature / now_temperature_index;
@@ -71,7 +82,11 @@ void setup() {
     Serial.println("Starting LoRa failed!");
     delay(100);
   }
+  
+  #ifdef DEBUG_OUTPUT
   Serial.println("LoRa sender starting");
+  #endif
+  
   LoRa.enableCrc();
   get_temperature_step = send_step / temperature_indexes_num + 1;
   Serial.println(get_temperature_step);
@@ -86,16 +101,23 @@ void loop() {
   {
     now_temperature_index++;
     temperature_values[now_temperature_index] = thermo.readCelsius();
+
+    #ifdef DEBUG_OUTPUT
     Serial.print("get to ");
     Serial.print(now_temperature_index);
     Serial.print(" value ");
     Serial.println(temperature_values[now_temperature_index]);
+    #endif
   }
 
   if (now_step % send_step == 0)
   {
     in_wait = 1;
+    
+    #ifdef DEBUG_OUTPUT
     Serial.println("in send");
+    #endif
+    
     while (in_wait)
     {
       Sender();
@@ -105,7 +127,10 @@ void loop() {
         int packetSize = LoRa.parsePacket();
         if (packetSize == 8)
         {
+          #ifdef DEBUG_OUTPUT
           Serial.print(" recieved packet: ");
+          #endif
+          
           while (LoRa.available())
           {
             for (size_t i = 0; i < BufferSize; ++i)
@@ -116,18 +141,25 @@ void loop() {
             Serial.write(Buffer, BufferSize);
           }
           Serial.println();
+          
           BufferUnion.Bytes[0] = Buffer[0];
           BufferUnion.Bytes[1] = Buffer[1];
           BufferUnion.Bytes[2] = Buffer[2];
           BufferUnion.Bytes[3] = Buffer[3];
+          
           if (BufferUnion.Int == addr) {
+            
             BufferUnion.Bytes[0] = Buffer[4];
             BufferUnion.Bytes[1] = Buffer[5];
             BufferUnion.Bytes[2] = Buffer[6];
             BufferUnion.Bytes[3] = Buffer[7];
+            
             if (BufferUnion.SmallInt == OK)
             {
+              #ifdef DEBUG_OUTPUT
               Serial.println("Sending secsess");
+              #endif
+              
               in_wait = 0;
               now_temperature_index = 0;
               break;
@@ -144,33 +176,6 @@ void loop() {
   WDTCSR |= (1 << WDIE); //Устанавливаем бит WDIE регистра WDTCSR для разрешения прерываний от сторожевого таймера
   set_sleep_mode(SLEEP_MODE_PWR_DOWN); //Устанавливаем интересующий нас режим
   sleep_mode(); // Переводим МК в спящий режим
-
-  /*in_wait = 1;
-    Sender();
-    while (in_wait) {
-    while (millis() - last_send_time < send_time_interval) {
-      int packetSize = LoRa.parsePacket();
-      if (packetSize) {
-        Serial.print(" recieved packet: ");
-        while (LoRa.available()) {
-          for (size_t i = 0; i < BufferSize; ++i) {
-            Buffer[i] = LoRa.read();
-          }
-          Serial.write(Buffer, BufferSize);
-        }
-        Serial.println();
-        Serial.println(Buffer[4]);
-        Serial.println(Buffer[5]);
-        Serial.println(Buffer[6]);
-        Serial.println(Buffer[7]);
-        if(YES) {
-          Serial.println("YES");
-          in_wait = 0;
-        }
-      }
-    }
-    last_send_time = millis();
-    }//*/ //it is work
 }
 
 ISR (WDT_vect) {
