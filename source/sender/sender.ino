@@ -55,13 +55,13 @@ void Sender() {
   temperature = 0.0;
   for (int i = 1; i <= now_temperature_index; i++) temperature += temperature_values[i];
 
-  #ifdef DEBUG_OUTPUT
+#ifdef DEBUG_OUTPUT
   Serial.print("Sending packet: ");
   Serial.print(addr);
   Serial.print(" ");
   Serial.println(temperature / now_temperature_index);
-  #endif
-  
+#endif
+
   // send packet
   LoRa.beginPacket();
   LoRa.write(MagicByte);
@@ -82,11 +82,11 @@ void setup() {
     Serial.println("Starting LoRa failed!");
     delay(100);
   }
-  
-  #ifdef DEBUG_OUTPUT
+
+#ifdef DEBUG_OUTPUT
   Serial.println("LoRa sender starting");
-  #endif
-  
+#endif
+
   LoRa.enableCrc();
   get_temperature_step = send_step / temperature_indexes_num + 1;
   Serial.println(get_temperature_step);
@@ -100,24 +100,26 @@ void loop() {
   if (now_step % get_temperature_step == 0)
   {
     now_temperature_index++;
-    temperature_values[now_temperature_index] = thermo.readCelsius();
+    do {
+      temperature_values[now_temperature_index] = thermo.readCelsius();
+    } while (isnan(temperature_values[now_temperature_index]));
 
-    #ifdef DEBUG_OUTPUT
+#ifdef DEBUG_OUTPUT
     Serial.print("get to ");
     Serial.print(now_temperature_index);
     Serial.print(" value ");
     Serial.println(temperature_values[now_temperature_index]);
-    #endif
+#endif
   }
 
   if (now_step % send_step == 0)
   {
     in_wait = 1;
-    
-    #ifdef DEBUG_OUTPUT
+
+#ifdef DEBUG_OUTPUT
     Serial.println("in send");
-    #endif
-    
+#endif
+
     while (in_wait)
     {
       Sender();
@@ -127,10 +129,10 @@ void loop() {
         int packetSize = LoRa.parsePacket();
         if ((packetSize == PacketSize) && LoRa.read() == MagicByte)
         {
-          #ifdef DEBUG_OUTPUT
+#ifdef DEBUG_OUTPUT
           Serial.print(" recieved packet: ");
-          #endif
-          
+#endif
+
           while (LoRa.available())
           {
             for (size_t i = 0; i < BufferSize; ++i)
@@ -141,25 +143,25 @@ void loop() {
             Serial.write(Buffer, BufferSize);
           }
           Serial.println();
-          
+
           BufferUnion.Bytes[0] = Buffer[0];
           BufferUnion.Bytes[1] = Buffer[1];
           BufferUnion.Bytes[2] = Buffer[2];
           BufferUnion.Bytes[3] = Buffer[3];
-          
+
           if (BufferUnion.Int == addr) {
-            
+
             BufferUnion.Bytes[0] = Buffer[4];
             BufferUnion.Bytes[1] = Buffer[5];
             BufferUnion.Bytes[2] = Buffer[6];
             BufferUnion.Bytes[3] = Buffer[7];
-            
+
             if (BufferUnion.SmallInt == OK)
             {
-              #ifdef DEBUG_OUTPUT
+#ifdef DEBUG_OUTPUT
               Serial.println("Sending secsess");
-              #endif
-              
+#endif
+
               in_wait = 0;
               now_temperature_index = 0;
               break;
