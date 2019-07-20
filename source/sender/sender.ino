@@ -9,7 +9,7 @@
 const uint8_t MagicByte = 1337 % 255;
 const size_t PacketSize = 9;
 
-const int addr = 12;
+const int addr = 11;
 
 const int thermoDO = 7;  // Определяем константу с указанием № вывода Arduino к которому подключён вывод DO  ( SO, MISO ) модуля на чипе MAX6675
 const int thermoCS = 6;  // Определяем константу с указанзием № вывода Arduino к которому подключён вывод CS  ( SS )       модуля на чипе MAX6675
@@ -127,7 +127,7 @@ void loop() {
       for (int i = 0; i < waiting_steps; i++)
       {
         int packetSize = LoRa.parsePacket();
-        if ((packetSize == PacketSize) && LoRa.read() == MagicByte)
+        if ((packetSize == PacketSize) && (LoRa.read() == MagicByte))
         {
 #ifdef DEBUG_OUTPUT
           Serial.print(" recieved packet: ");
