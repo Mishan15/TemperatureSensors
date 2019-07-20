@@ -125,7 +125,7 @@ void loop() {
       for (int i = 0; i < waiting_steps; i++)
       {
         int packetSize = LoRa.parsePacket();
-        if (packetSize == 8)
+        if ((packetSize == PacketSize) && LoRa.read() == MagicByte)
         {
           #ifdef DEBUG_OUTPUT
           Serial.print(" recieved packet: ");

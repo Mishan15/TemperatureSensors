@@ -1,7 +1,7 @@
 #include <SPI.h>
 #include <LoRa.h>
 
-//#define DEBUG_OUTPUT;
+#define DEBUG_OUTPUT;
 
 const uint8_t MagicByte = 1337 % 255;
 const size_t PacketSize = 9;
@@ -41,6 +41,7 @@ void Send() {
   
   for (int i = 0; i < 10; i++) {
     LoRa.beginPacket();
+    LoRa.write(MagicByte);
     BufferUnion.Int = addr;
     LoRa.write(BufferUnion.Bytes, 4);
     BufferUnion.SmallInt = OK;
