@@ -2,7 +2,9 @@
 #include <LoRa.h>
 
 #define DEBUG_OUTPUT;
+//#define DEBUG_OUTPUT_LOOP;
 
+const uint32_t LoopDelayMS = 100;
 const uint8_t MagicByte = 1337 % 255;
 const size_t PacketSize = 9;
 
@@ -127,6 +129,10 @@ void setup() {
 }
 
 void loop() {
-  delay(10);
+  delay(LoopDelayMS);
   LoRa.receive();
+  
+  #ifdef DEBUG_OUTPUT_LOOP
+  Serial.println("LOOP");
+  #endif
 }
